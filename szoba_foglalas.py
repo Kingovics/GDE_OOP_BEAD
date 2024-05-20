@@ -18,12 +18,12 @@ class Idointervallum:
         return (self.veg - self.kezdet).days
 
 
-class Room(ABC):
-    def __init__(self, number, price_per_night):
+class Szoba(ABC):
+    def __init__(self, szam, ar_per_nap):
 
-        self.number = number
-        self.price_per_night = price_per_night
-        self.reserved = []
+        self.szam = szam
+        self.ar_per_nap = ar_per_nap
+        self.lefoglalt = []
         self.beolv()
 
     def beolv(self):
@@ -31,161 +31,170 @@ class Room(ABC):
         h2 = None
         h3 = None
 
-        filename = (str(self.number) + '_reservations.txt')
+        filename = (str(self.szam) + '_reservations.txt')
         if not os.path.exists(filename):
             with open(filename, 'w') as file:
                 file.write('')
 
         with (open(filename, 'r') as file):
-            lines = file.readlines()
-            for line in lines:
-                line = line.strip()
-                parts = line.split(',')
+            sorok = file.readlines()
+            for sor in sorok:
+                sor = sor.strip()
+                parts = sor.split(',')
                 erkezes_str = parts[0].split(': ')[1].strip("'")
                 tavozas_str = parts[1].split(': ')[1].strip("'")
                 erkezes = datetime.strptime(erkezes_str, '%Y-%m-%d %H:%M:%S')
                 tavozas = datetime.strptime(tavozas_str, '%Y-%m-%d %H:%M:%S')
-                self.reserved.append(Idointervallum(erkezes, tavozas))
+                self.lefoglalt.append(Idointervallum(erkezes, tavozas))
 
-    def find_available_rooms(self, erk, tav, ):
-        overlap = False
-        for reservation in self.reserved:
-            if reservation.metszi(Idointervallum(erk, tav)):
-                overlap = True
-        return not overlap
+    def elerheto_szobak(self, erk, tav, ):
+        atfedes = False
+        for foglalasok in self.lefoglalt:
+            if foglalasok.metszi(Idointervallum(erk, tav)):
+                atfedes = True
+        return not atfedes
 
     def book(self, erk, tav):
-        if self.find_available_rooms(erk, tav, ):
-            with open(str(self.number) + '_reservations.txt', 'a') as file:
+        if self.elerheto_szobak(erk, tav, ):
+            with open(str(self.szam) + '_reservations.txt', 'a') as file:
                 file.write(f"'Erkezes': {erk}, 'Tavozas': {tav}\n")
-            self.reserved.append(Idointervallum(erk, tav))
+            self.lefoglalt.append(Idointervallum(erk, tav))
 
-            return f"A(z) {self.number}. Szoba foglalása sikeres a {erk.strftime('%Y-%m.%d')} - {tav.strftime('%Y-%m-%d')} Fizetendő összeg:{Idointervallum(erk, tav).hossza_napokban() * self.price_per_night} JMF."
+            return f"A(z) {self.szam}. Szoba foglalása sikeres a {erk.strftime('%Y-%m.%d')} - {tav.strftime('%Y-%m-%d')} Fizetendő összeg:{Idointervallum(erk, tav).hossza_napokban() * self.ar_per_nap} JMF."
         else:
-            print(f"A(z) {self.number}. Szoba foglalása nem lehetséges, mert már foglalt.")
+            print(f"A(z) {self.szam}. Szoba foglalása nem lehetséges, mert már foglalt.")
             return True
 
     def foglalas_lemond(self, kezd):
-        for reservation in self.reserved:
-            if reservation.kezdet == kezd:
-                self.reserved.remove(reservation)
-                with open(str(self.number) + '_reservations.txt', 'w') as file:
-                    for reservation in self.reserved:
-                        file.write(f"'Erkezes': {reservation.kezdet}, 'Tavozas': {reservation.veg}\n")
+        for foglalas in self.lefoglalt:
+            if foglalas.kezdet == kezd:
+                self.lefoglalt.remove(foglalas)
+                with open(str(self.szam) + '_reservations.txt', 'w') as file:
+                    for foglalas in self.lefoglalt:
+                        file.write(f"'Erkezes': {foglalas.kezdet}, 'Tavozas': {foglalas.veg}\n")
                 return True
 
-    def reserved_dates(self):
-        return ', '.join([str(intervallum) for intervallum in self.reserved])
+    def foglalt_datumok(self):
+        return ', '.join([str(intervallum) for intervallum in self.lefoglalt])
 
     @abstractmethod
     def __str__(self):
         pass
 
 
-class Singel_Bedroom(Room):
+class Egyagyas_Szoba(Szoba):
     def __str__(self):
-        if not hotel.adat == 'Foglalások':
-            return f"Egyágyass szoba. Szoba száma: {self.number}, Ár: {self.price_per_night}/nap"
+        if not szalloda.adat == 'Foglalások':
+            return f"Egyágyass szoba. Szoba száma: {self.szam}, Ár: {self.ar_per_nap}/nap"
         else:
-            reserved_str = self.reserved_dates()
-            return f"Egyágyass szoba. Szoba száma: {self.number}, Foglalások: {reserved_str if reserved_str else 'Nincs foglalás erre a szobára'}"
+            lefoglalt_str = self.foglalt_datumok()
+            return f"Egyágyass szoba. Szoba száma: {self.szam}, Foglalások: {lefoglalt_str if lefoglalt_str else 'Nincs foglalás erre a szobára'}"
 
 
-class Double_Bedroom(Room):
+class Ketagyas_Szoba(Szoba):
     def __str__(self):
-        if not hotel.adat == 'Foglalások':
-            return f"Ketágyass szoba. Szoba száma: {self.number}, Ár: {self.price_per_night}/nap"
+        if not szalloda.adat == 'Foglalások':
+            return f"Ketágyass szoba. Szoba száma: {self.szam}, Ár: {self.ar_per_nap}/nap"
         else:
-            reserved_str = self.reserved_dates()
-            return f"Kétágyas szoba. Szoba száma: {self.number}, Foglalások: {reserved_str if reserved_str else 'Nincs foglalás erre a szobára'}"
+            lefoglalt_str = self.foglalt_datumok()
+            return f"Kétágyas szoba. Szoba száma: {self.szam}, Foglalások: {lefoglalt_str if lefoglalt_str else 'Nincs foglalás erre a szobára'}"
 
 
-class Hotel:
+class Lakosztaly(Szoba):
+    def __str__(self):
+        if not szalloda.adat == 'Foglalások':
+            return f"Lakosztály szoba. Szoba száma: {self.szam}, Ár: {self.ar_per_nap}/nap"
+        else:
+            lefoglalt_str = self.foglalt_datumok()
+            return f"Lakosztály szoba. Szoba száma: {self.szam}, Foglalások: {lefoglalt_str if lefoglalt_str else 'Nincs foglalás erre a szobára'}"
+
+
+class Szalloda:
     def __init__(self):
-        self.rooms = []
-        self.reserved_rooms = []
+        self.szobak = []
+        self.lefoglalt_szobak = []
         self.adat = ''
 
-    def add_room(self, room: Room):
+    def szoba_hozzad(self, szoba: Szoba):
         if not self.adat == 'Foglalások':
-            self.rooms.append(room)
+            self.szobak.append(szoba)
         else:
-            self.reserved_rooms.append(room)
+            self.lefoglalt_szobak.append(szoba)
 
     def room_datas(self, adat):
         self.adat = adat
-        self.add_room(Singel_Bedroom(101, 200, ))
-        self.add_room(Double_Bedroom(102, 666, ))
-        self.add_room(Double_Bedroom(103, 9999, ))
+        self.szoba_hozzad(Egyagyas_Szoba(101, 12000, ))
+        self.szoba_hozzad(Ketagyas_Szoba(102, 20000, ))
+        self.szoba_hozzad(Lakosztaly(103, 35000, ))
 
-    def book_room(self, number, erk, tav):
+    def szoba_foglal(self, szam, erk, tav):
 
-        for room in self.rooms:
-            if room.number == number:
-                return room.book(erk, tav)
+        for szoba in self.szobak:
+            if szoba.szam == szam:
+                return szoba.book(erk, tav)
         else:
             print("A megadott szobaszám nem létezik vagy már foglalt.")
             return False
 
-    def lemond_room(self, number, erk, ):
+    def szoba_lemond(self, szam, erk, ):
 
-        for room in self.rooms:
-            if room.number == number:
-                return room.foglalas_lemond(erk, )
+        for szobak in self.szobak:
+            if szobak.szam == szam:
+                return szobak.foglalas_lemond(erk)
         else:
             print("Nem létezik ilyen foglalás")
             return False
 
-    def available_rooms(self, ):
+    def elerheto_szobak(self):
 
-        return "\n".join(str(room) for room in self.rooms)
+        return "\n".join(str(szobak) for szobak in self.szobak)
 
-    def reservations(self, ):
+    def foglalasok(self):
 
-        return "\n".join(str(room) for room in self.reserved_rooms)
+        return "\n".join(str(szobak) for szobak in self.lefoglalt_szobak)
 
-    def input_booking(self):
+    def foglalas_adatok(self):
 
         erk_str = input("Kérem adja meg az érkezés dátumát (éééé-hh-nn)")
         tav_str = input("Kérem adja meg a távozás időpontját (éééé-hh-nn)")
         number = int(input("Adja meg a kért szoba számát!"))
         erk = datetime.strptime(erk_str, '%Y-%m-%d')
         tav = datetime.strptime(tav_str, '%Y-%m-%d')
-        print(hotel.book_room(number, erk, tav))
+        print(szalloda.szoba_foglal(number, erk, tav))
         return
 
-    def input_lemondas(self):
+    def lemondas_adatok(self):
         erk_str = input("Kérem adja meg az érkezés dátumát (éééé-hh-nn)")
         number = int(input("Adja meg a kért szoba számát!"))
         erk = datetime.strptime(erk_str, '%Y-%m-%d')
-        print(hotel.lemond_room(number, erk))
+        print(szalloda.szoba_lemond(number, erk))
         return
 
 
-def room_booking(hotel: Hotel):
+def szoba_foglalas(szalloda: Szalloda):
     while True:
         adat = input("Miben segíthetük?(Szobák/Foglalás/Foglalások/Mégsem)")
         if adat == "Szobák":
-            hotel.room_datas(adat)
-            print(hotel.available_rooms())
-            hotel.rooms = []
+            szalloda.room_datas(adat)
+            print(szalloda.elerheto_szobak())
+            szalloda.szobak = []
         elif adat == "Foglalás":
-            hotel.room_datas(adat)
-            hotel.input_booking()
+            szalloda.room_datas(adat)
+            szalloda.foglalas_adatok()
         elif adat == "Foglalások":
-            hotel.room_datas(adat)
-            print(hotel.reservations())
+            szalloda.room_datas(adat)
+            print(szalloda.foglalasok())
         elif adat == "Mégsem":
             print("Viszont látásra!")
             break
         elif adat == 'Lemondás':
-            hotel.room_datas(adat)
-            hotel.input_lemondas()
+            szalloda.room_datas(adat)
+            szalloda.lemondas_adatok()
             print('Foglalás sikeresen lemondva')
         else:
             print("Nem megfelelő adat!")
 
 
 adat = ''
-hotel = Hotel()
-room_booking(hotel)
+szalloda = Szalloda()
+szoba_foglalas(szalloda)
