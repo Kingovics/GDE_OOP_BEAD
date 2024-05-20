@@ -31,7 +31,7 @@ class Szoba(ABC):
         h2 = None
         h3 = None
 
-        filename = (str(self.szam) + '_reservations.txt')
+        filename = (str(self.szam) + '_foglalasok.txt')
         if not os.path.exists(filename):
             with open(filename, 'w') as file:
                 file.write('')
@@ -54,9 +54,9 @@ class Szoba(ABC):
                 atfedes = True
         return not atfedes
 
-    def book(self, erk, tav):
+    def foglalas(self, erk, tav):
         if self.elerheto_szobak(erk, tav, ):
-            with open(str(self.szam) + '_reservations.txt', 'a') as file:
+            with open(str(self.szam) + '_foglalasok.txt', 'a') as file:
                 file.write(f"'Erkezes': {erk}, 'Tavozas': {tav}\n")
             self.lefoglalt.append(Idointervallum(erk, tav))
 
@@ -69,7 +69,7 @@ class Szoba(ABC):
         for foglalas in self.lefoglalt:
             if foglalas.kezdet == kezd:
                 self.lefoglalt.remove(foglalas)
-                with open(str(self.szam) + '_reservations.txt', 'w') as file:
+                with open(str(self.szam) + '_foglalasok.txt', 'w') as file:
                     for foglalas in self.lefoglalt:
                         file.write(f"'Erkezes': {foglalas.kezdet}, 'Tavozas': {foglalas.veg}\n")
                 return True
@@ -131,7 +131,7 @@ class Szalloda:
 
         for szoba in self.szobak:
             if szoba.szam == szam:
-                return szoba.book(erk, tav)
+                return szoba.foglalas(erk, tav)
         else:
             print("A megadott szobaszám nem létezik vagy már foglalt.")
             return False
